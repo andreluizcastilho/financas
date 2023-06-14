@@ -1,0 +1,14 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+!pip install yfinance --upgrade --no-cache-dir
+import yfinance as yf
+yf.pdr_override()
+
+ibov = web.get_data_yahoo('^BVSP')
+
+ibov.head()
+
+ibov.tail()
+
+ibov['Close'].plot(figsize=(22,8))
