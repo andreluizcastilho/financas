@@ -1,0 +1,43 @@
+!pip install yfinance --upgrade --no-cache-dir
+import yfinance as yf
+yf.pdr_override()
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import pandas_datareader.data as web
+
+tickers = ['^BVSP', 'USDBRL=x']
+carteira = web.get_data_yahoo(tickers)['Close']
+
+carteira
+
+carteira.plot(subplots=True, figsize=(20,8))
+
+tickers = ['^BVSP', 'USDBRL=x']
+carteira = web.get_data_yahoo(tickers, start="2007-01-02")['Close']
+carteira.plot(subplots=True, figsize=(20,8))
+
+carteira = carteira.dropna()
+carteira.plot(subplots=True, figsize=(20,8))
+
+carteira.columns=["DOLAR", "IBOV"]
+carteira.plot(subplots=True, figsize=(20,8))
+
+#INÍCIO SEABORN
+import seaborn as sns
+
+sns.set()
+carteira.columns=["DOLAR", "IBOV"]
+carteira.plot(subplots=True, figsize=(20,8))
+
+carteira.corr()
+
+sns.heatmap(carteira.corr())
+
+carteira['DOLAR'].rolling(252).corr(carteira['IBOV']).dropna().plot(figsize=(22,8))
+
+carteira['IBOV_DOLARIZADO'] = (carteira['IBOV'] / carteira['DOLAR'])
+carteira
+
+carteira.plot(subplots=True, figsize=(20,8))
+
