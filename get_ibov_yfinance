@@ -6,3 +6,7 @@ import yfinance as yf
 yf.pdr_override()
 
 ibov = web.get_data_yahoo('^BVSP')
+
+ibov.head()
+
+ibov.tail()
