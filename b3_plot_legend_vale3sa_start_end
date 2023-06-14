@@ -1,0 +1,13 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+
+!pip install yfinance --upgrade --no-cache-dir
+import yfinance as yf
+yf.pdr_override()
+
+b3 = web.get_data_yahoo('VALE3.SA', start="2010-09-09", end="2023-09-09")
+
+b3['Close'].plot(figsize=(22,8), label="VALE3.SA")
+b3['Close'].rolling(21).mean().plot(label="MM21")
+b3['Close'].rolling(200).mean().plot(label="MM200")
+plt.legend()
