@@ -1,0 +1,47 @@
+Aula 7.2. Armazenamento de dados fundamentalistas
+Exemplo 1 - Coletando a lista de companhias com registro na CVM
+Acessar o site https://www.rad.cvm.gov.br/ENET/frmConsultaExternaCVM.aspx
+
+!pip install requests_html
+import requests_html
+
+r = requests_html.HTMLSession().get("https://www.rad.cvm.gov.br/ENET/frmConsultaExternaCVM.aspx")
+
+r.content
+
+import re
+
+a = re.findall(r'(?<=<input name="hdnEmpresas" type="hidden" id="hdnEmpresas" value=")[^"]*(?=" />)', r.text)
+
+a = a[0]
+
+list(eval(a.replace("{ key:", "{'key':").replace("value:", "'value':")))
+
+import pandas as pd
+
+pd.DataFrame(list(eval(a.replace("{ key:", "{'key':").replace("value:", "'value':"))))
+
+df_empresas = pd.DataFrame(list(eval(a.replace("{ key:", "{'key':").replace("value:", "'value':"))))
+
+df_empresas
+
+from sqlalchemy import create_engine
+
+pwd = ''
+con = create_engine(
+    f'mysql+pymysql://root:{pwd}@localhost:3306/utils'
+)
+
+df_empresas.columns = [
+    "cod_cvm_empresa",
+    "nome_empresa"
+]
+
+df_empresas
+
+df_empresas.to_sql(
+    name="cadastro_cvm",
+    con=con,
+    if_exists="replace",
+    index=False
+)
