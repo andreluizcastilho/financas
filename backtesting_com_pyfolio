@@ -1,0 +1,20 @@
+#5 Backtesting com Pyfolio | Sharpe, Beta, Volatilidade, CAGR, Drawdown
+
+!pip install yfinance --upgrade --no-cache-dir
+import yfinance as yf
+yf.pdr_override()
+!pip install git+https://github.com/quantopian/pyfolio
+
+
+
+tickers = ['ABEV3.SA', 'ITSA4.SA', 'WEGE3.SA', 'USIM5.SA', 'VALE3.SA', '^BVSP']
+dados_yahoo = web.get_data_yahoo(tickers, period="5y")['Adj Close']
+
+dados_yahoo
+
+retorno = dados_yahoo.pct_change()
+retorno
+
+retorno_acumulado = (1 + retorno).cumprod()
+retorno_acumulado.iloc[0] = 1
+retorno_acumulado
