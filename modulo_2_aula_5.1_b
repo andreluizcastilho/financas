@@ -1,0 +1,144 @@
+Capítulo 5 – Desenvolvimento de web crawlers (hands-on)
+Aula 5.1. Coleta de dados de mercado
+Exemplo 1 - Coleta de dados da API Yahoo! Finance
+
+No exemplo a seguir vamos fazer requisições para a série de preços e volume (OHLCV) da ação MBLY3
+
+Insatalação da biblioteca yfinance
+
+!pip install yfinance
+
+Importar a biblioteca yfinance
+
+import yfinance as yf
+
+Definimos o instrumento a ser requisitado
+
+Para isso, primeiro conferir o ticker do instrumento acessando https://finance.yahoo.com/
+
+MBLY3 = yf.Ticker("MBLY3.SA")
+
+df_hist = MBLY3.history(period="5y", interval="1d")
+
+df_hist.head()
+
+df_hist.tail()
+
+Exemplo 2 - Coleta de dados de mercado de outros provedores via API
+Exemplo 2.1 - Marketstack (https://marketstack.com/)
+
+key = "21341a8334623ed5dc650354da82697f"
+
+import requests
+
+url = f"http://api.marketstack.com/v1/eod?access_key={key}&symbols=MBLY3.BVMF"
+
+r = requests.get(url)
+
+r.json()
+
+pd.DataFrame(r.json()['Time Series (Daily)']).T
+
+
+
+
+Exemplo 2.3 - EOD (https://eodhistoricaldata.com/)
+
+key = "647f760e9fe241.25045800"
+
+url = f"https://eodhistoricaldata.com/api/exchanges-list/?api_token={key}&fmt=json"
+
+r = requests.get(url)
+
+r.json()
+
+EXCHANGE_CODE = "SA"
+
+url = f"https://eodhistoricaldata.com/api/exchange-symbol-list/{EXCHANGE_CODE}?api_token={key}&fmt=json"
+
+r = requests.get(url)
+
+r.json()
+
+
+
+for dict_company in r.json():    
+    if "mobly" in dict_company["Name"].lower():
+        code = dict_company["Code"]
+        
+        
+url = f"https://eodhistoricaldata.com/api/eod/{code}.{EXCHANGE_CODE}?api_token={key}&fmt=json" 
+
+r = requests.get(url)
+
+r.json()
+
+
+
+Exemplo 3 - Coleta de dados de derivativos da B3
+
+Primeiro vamos inspecionar o site https://www.b3.com.br/pt_br/market-data-e-indices/servicos-de-dados/market-data/historico/derivativos/ajustes-do-pregao/
+
+url = "https://www2.bmf.com.br/pages/portal/bmfbovespa/lumis/lum-ajustes-do-pregao-ptBR.asp"
+
+query = {
+
+    "dData1": "10/03/2023"
+
+}
+
+import requests
+
+# POST sem requests HTML 
+
+r = requests.post(
+
+    url, 
+
+    params=query
+
+)
+
+!pip install requests-html
+import requests_html
+
+# Se usar o requests sem o HTML não vai funcionar
+table_html = r.html.xpath("//table[contains(@id,'tblDadosAjustes')]")
+
+r.content
+
+r = requests_html.HTMLSession().post(
+    url, 
+    params=query
+)
+
+table_html = r.html.xpath("//table[contains(@id,'tblDadosAjustes')]")
+
+len(table_html)
+
+table_html[0].full_text
+
+for element_ in table_html[0].xpath("//tr"):
+    print(element_.text.split("\n"))
+    
+list_linhas = []
+
+for element_ in table_html[0].xpath("//tr")[1:]:
+    if len(element_.text.split("\n")) == 6:
+        instrumento = element_.text.split("\n")[0]
+        linha = element_.text.split("\n")
+    if len(element_.text.split("\n")) == 5:
+        linha = [instrumento] + element_.text.split("\n")        
+    list_linhas.append(linha)
+    
+list_linhas
+
+table_html[0].xpath("//tr")[0].text.split("\n")
+
+import pandas as pd
+
+df_futuros = pd.DataFrame(list_linhas, columns=table_html[0].xpath("//tr")[0].text.split("\n"))
+
+df_futuros.head()
+
+df_futuros.tail()
