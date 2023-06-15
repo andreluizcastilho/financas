@@ -1,0 +1,59 @@
+!pip install yfinance
+import yfinance as yf
+
+Definimos o instrumento a ser requisitado
+Para isso, primeiro conferir o ticker do instrumento acessando https://finance.yahoo.com/
+
+MBLY3 = yf.Ticker("MBLY3.SA")
+df_hist = MBLY3.history(period="5y", interval="1d")
+
+df_hist.head()
+
+df_hist.tail()
+
+df_hist = df_hist[
+    [
+        "Open",
+        "High",
+        "Low",
+        "Close",
+        "Volume"
+    ]    
+]
+
+df_hist
+
+df_hist.reset_index(inplace=True)
+
+df_hist
+
+df_hist.columns = [
+    "data_ref",
+    "preco_abertura",
+    "preco_maxima",
+    "preco_minima",
+    "preco_fechamento",
+    "volume"
+]
+
+df_hist
+
+df_hist["ativo"] = "MBLY3.SA"
+
+df_hist
+
+# PODE SER QUE SEJA NECESSÁRIO INSTALAR ESSAS BIBLIOTECAS NO AMBIENTE VIRTUAL XP_CRV PELO CMD
+!pip install pymysql
+!pip install SQLAlchemy 
+from sqlalchemy import create_engine
+
+pwd = ''
+con = create_engine(
+    f'mysql+pymysql://root:{pwd}@localhost:3306/dados_mercado'
+)
+
+df_hist.to_sql(
+    name="precos_acoes",
+    con=con,
+    if_exists='replace'
+)
