@@ -1,0 +1,201 @@
+Exemplo 2 - Coleta de dados da CVM usando requests-html
+No exemplo a seguir vamos primeiramente entender como o site de documentos da CVM funciona.
+Vamos inicialmente inspecionar o site https://www.rad.cvm.gov.br/ENET/frmConsultaExternaCVM.aspx
+
+url = "https://www.rad.cvm.gov.br/ENET/frmConsultaExternaCVM.aspx/ListarDocumentos"
+
+payload = { 
+    "dataDe": '01/03/2022', 
+    "dataAte": '01/03/2023' , 
+    "empresa": ',025461', 
+    "setorAtividade": '-1', 
+    "categoriaEmissor": '-1', 
+    "situacaoEmissor": '-1', 
+    "tipoParticipante": '-1', 
+    "dataReferencia": '', 
+    "categoria": 'EST_3', 
+    "periodo": '2', 
+    "horaIni": '', 
+    "horaFim": '', 
+    "palavraChave":'',
+    "ultimaDtRef":'false', 
+    "tipoEmpresa":'0', 
+    "token": '', 
+    "versaoCaptcha": ''
+}
+
+
+import requests_html
+
+r = requests_html.HTMLSession().post(url, json=payload)
+
+r.json()
+
+dados = r.json()["d"]["dados"]
+
+dados
+
+import re
+import pandas as pd
+
+regex = r"(?<=02546-1)(.*?)(?=\$&&\*)"
+matches = re.findall(regex, dados)
+
+len(matches)
+
+df_docs = pd.DataFrame()
+
+for match in matches:
+    
+    # Extrair as datas
+    
+    re_datas = re.findall(r'<spanOrder>(.*?)</spanOrder>', match)
+    dt_referencia = re_datas[1]
+    dt_entrega = re_datas[2]
+    
+    # Extrair o nome da cia
+    re_cia = re.findall(r"\$&(.+?)\.\$&", match)
+    nome_cia = re_cia[0]
+    
+    # Extrair o vetor com parametros do documento
+    re_doc = re.findall(r'</i>(.*?)</i>', match)
+    downl_args = re.findall(r"OpenDownloadDocumentos\('(.+?)'\)", re_doc[0])[0].replace("'", "").split(",")
+    
+    df_docs = pd.concat([
+    df_docs,
+        pd.DataFrame.from_dict([
+            {
+                "Empresa": nome_cia,
+                "DT_REF": dt_referencia,
+                "DT_ENTREGA": dt_entrega,
+                "ARGS": downl_args
+            }
+        ])
+    ], ignore_index=True
+    
+    )
+    
+
+df_docs
+    
+args = df_docs["ARGS"].iloc[0]
+args
+
+url = "https://www.rad.cvm.gov.br/ENET/"
+numSequencia = args[0]
+numVersao = args[1]
+numProtocolo = args[2]
+descTipo = args[3]
+url = url + "frmDownloadDocumento.aspx?Tela=ext&numSequencia=" + numSequencia + "&numVersao=" + numVersao + "&numProtocolo=" + numProtocolo + "&descTipo=" + descTipo + "&CodigoInstituicao=1";
+
+url
+
+requests_html.HTMLSession().get(url)
+
+numProtocolo
+
+r = requests_html.HTMLSession().get(url)
+with open(f"{numProtocolo}.zip", 'wb') as fd:
+    for chunk in r.iter_content(chunk_size=128):
+        fd.write(chunk)
+        
+
+# DICA CHAT GPT
+import zipfile
+
+archive = zipfile.ZipFile(f"{numProtocolo}.zip", 'r')
+file_list = archive.namelist()
+
+print(file_list)  # Print the list of file names in the archive
+
+
+# Verify if the desired file exists in the archive
+if '025461ITR31-03-2022v1.xml' in file_list:
+    xml_data = archive.read('025461ITR31-03-2022v1.xml')
+    # Process the XML data as needed
+else:
+    print("The specified file does not exist in the archive.")
+  
+  
+  
+import zipfile
+archive = zipfile.ZipFile(f"{numProtocolo}.zip", 'r')
+xml_itr = archive.read('025461ITR30-09-2022v1.xml')
+
+xml_itr
+
+!pip install xmltodict
+
+import xmltodict
+
+my_dict = xmltodict.parse(xml_itr)
+
+my_dict
+
+my_dict['XmlInformacoesTrimestraisFinanceiras']['DadosITR']['Formulario'].keys()
+
+my_dict['XmlInformacoesTrimestraisFinanceiras']['DadosITR']['Formulario']['DfConsolidadas']
+
+my_dict['XmlInformacoesTrimestraisFinanceiras']['DadosITR']['Formulario']['DfConsolidadas'].keys()
+
+doc = "BalancoPatrimonialAtivo"
+
+my_dict['XmlInformacoesTrimestraisFinanceiras']['DadosITR']['Formulario']['DfConsolidadas'][doc]
+
+df_bpa = pd.DataFrame()
+for row in my_dict['XmlInformacoesTrimestraisFinanceiras']['DadosITR']['Formulario']['DfConsolidadas'][doc]['Conta']:
+    df_bpa = pd.concat([df_bpa, pd.DataFrame([row])])
+    
+df_bpa
+
+my_dict['XmlInformacoesTrimestraisFinanceiras']['DadosEmpresa']
+
+cod_cvm = my_dict['XmlInformacoesTrimestraisFinanceiras']['DadosEmpresa']['CodigoCvm']
+cod_cvm
+
+my_dict['XmlInformacoesTrimestraisFinanceiras']['DadosITR']
+
+my_dict['XmlInformacoesTrimestraisFinanceiras']['DadosITR']["DataReferencia"]
+
+pd.to_datetime(my_dict['XmlInformacoesTrimestraisFinanceiras']['DadosITR']["DataReferencia"], format="%d/%m/%Y")
+
+df_bpa = df_bpa[
+    [
+        "CodigoConta",
+        #"DescricaoConta",
+        "TrimestreAtual"
+    ]
+]
+
+df_bpa.columns = [
+    "cod_conta",
+    "valor_tri_atual"
+]
+
+df_bpa
+
+df_bpa["cod_cvm"] = cod_cvm
+
+df_bpa
+
+df_bpa["data_ref"] = pd.to_datetime(my_dict['XmlInformacoesTrimestraisFinanceiras']['DadosITR']["DataReferencia"], format="%d/%m/%Y")
+
+# CASO PRECISE APAGAR ALGUMA COLUNA
+df_bpa.drop("dt_ref", axis=1, inplace=True)
+
+df_bpa
+
+from sqlalchemy import create_engine
+
+con = create_engine(
+    f'mysql+pymysql://root:{pwd}@localhost:3306/dados_fundamentalistas'
+)
+
+#df_bpa.reset_index(inplace=True, drop=True)
+
+df_bpa.to_sql(
+    name="consol_bpa",
+    con=con,
+    if_exists='replace',
+    index=False
+)
